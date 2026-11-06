@@ -155,10 +155,10 @@ The Docker Cloud agent template uses label `maven-docker-agent`, image
 `/home/jenkins/agent`, instance capacity `1`, pull strategy **Never pull**, and
 network `devops-ci`, with **Attach Docker container** as its connection method.
 Its **Container settings > Mounts** must include
-`/var/run/docker.sock:/var/run/docker.sock` and **Extra Groups** must include
-`0` so the agent can access the root-owned Docker socket without running as
-root. This gives the build agent control of the local Docker daemon; only run
-trusted pipeline code.
+`type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock` and **Extra
+Groups** must include `0` so the agent can access the root-owned Docker socket
+without running as root. This gives the build agent control of the local Docker
+daemon; only run trusted pipeline code.
 
 After tests and the SonarQube quality gate pass, the `HelloDocker` pipeline
 builds the root `Dockerfile` locally as `product-catalog:build-<BUILD_NUMBER>`
