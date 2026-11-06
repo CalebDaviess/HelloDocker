@@ -107,3 +107,17 @@ To build just the API image, run `docker build -t product-catalog .` from the pr
 ## Tests
 
 Run `mvn test` when the Compose PostgreSQL service is running at `localhost:5432` or with Docker Desktop configured as the active context. The test profile disables Quarkus Dev Services and connects directly to the local Compose database instead of attempting its own Docker-managed PostgreSQL instance.
+
+## Jenkins
+
+The root `Jenkinsfile` runs Maven verification, reports compiler warnings, and
+performs SonarQube analysis and quality-gate checks on the
+`maven-docker-agent`. Its `githubPush()` trigger lets a Jenkins Pipeline job
+configured from this repository build when GitHub sends a push event.
+
+Configure the job's SCM repository as this GitHub repository, branch as
+`*/main`, and script path as `Jenkinsfile`. In the repository's GitHub
+**Settings > Webhooks**, add
+`https://<your-ngrok-domain>/github-webhook/`, choose **application/json**, and
+select the **push** event. Keep Jenkins restricted to trusted users; the
+webhook endpoint itself is publicly reachable through the tunnel.
