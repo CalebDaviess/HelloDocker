@@ -133,13 +133,14 @@ Jenkins, set `$env:APP_PORT = "8081"` before starting the application stack.
 
 The `HelloDocker` Pipeline job is configured for this repository's `main`
 branch and root `Jenkinsfile`. It publishes Maven Surefire JUnit XML results
-in Jenkins and archives the raw XML files, including when tests fail. A
-JaCoCo Maven plugin execution generates XML coverage at
-`target/site/jacoco/jacoco.xml` during `mvn verify`; the SonarQube analysis
-imports that report. JUnit test results and JaCoCo coverage are separate
-reports: Surefire supplies test execution results, while JaCoCo supplies line
-and branch coverage. Existing test dependencies are `quarkus-junit5` and
-`rest-assured` (test scope). A separate `HelloDocker-PRs` Multibranch Pipeline
+in Jenkins and archives the raw XML files, including when tests fail. The
+`quarkus-jacoco` test extension generates coverage for the existing
+`@QuarkusTest` tests at `target/jacoco-report/jacoco.xml`; SonarQube imports
+that report. JUnit test results and JaCoCo coverage are separate reports:
+Surefire supplies test execution results, while JaCoCo supplies line and
+branch coverage. Existing test dependencies include `quarkus-junit5`,
+`quarkus-jacoco`, and `rest-assured` (test scope). A separate
+`HelloDocker-PRs` Multibranch Pipeline
 discovers pull requests from the origin repository and uses the same root
 `Jenkinsfile`; it does not scan regular branches, so `HelloDocker` remains
 responsible for `main` builds.
