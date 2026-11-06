@@ -154,9 +154,18 @@ The Docker Cloud agent template uses label `maven-docker-agent`, image
 `devops-maven-agent:3.9.9-java21`, remote filesystem root
 `/home/jenkins/agent`, instance capacity `1`, pull strategy **Never pull**, and
 network `devops-ci`, with **Attach Docker container** as its connection method.
+Its **Container settings > Mounts** must include
+`/var/run/docker.sock:/var/run/docker.sock` and **Extra Groups** must include
+`0` so the agent can access the root-owned Docker socket without running as
+root. This gives the build agent control of the local Docker daemon; only run
+trusted pipeline code.
 
-The `HelloDocker` pipeline uses SonarQube project key `product-catalog`; the
-existing `DevOpsPractice` job remains separate and unchanged.
+After tests and the SonarQube quality gate pass, the `HelloDocker` pipeline
+builds the root `Dockerfile` locally as `product-catalog:build-<BUILD_NUMBER>`
+and `product-catalog:sha-<12-character-commit>`. These tags identify each
+build and its source commit. The image stays in the local Docker image store;
+it is not pushed to a registry or deployed publicly. The existing
+`DevOpsPractice` job remains separate and unchanged.
 
 To stop Jenkins and SonarQube without removing their persistent data:
 

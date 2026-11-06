@@ -49,6 +49,22 @@ pipeline {
                 }
             }
         }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    def image = 'product-catalog'
+                    def buildTag = "build-${env.BUILD_NUMBER}"
+                    def commitTag = sh(
+                        script: 'git rev-parse --short=12 HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    sh "docker build --tag ${image}:${buildTag} --tag ${image}:sha-${commitTag} ."
+                    echo "Built ${image}:${buildTag} and ${image}:sha-${commitTag} locally"
+                }
+            }
+        }
     }
 
     post {
