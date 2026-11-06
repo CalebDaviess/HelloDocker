@@ -36,7 +36,7 @@ pipeline {
             steps {
                 echo 'Analyzing source code with SonarQube'
                 withSonarQubeEnv('Local SonarQube') {
-                    sh 'mvn --batch-mode --no-transfer-progress org.sonarsource.scanner.maven:sonar-maven-plugin:5.0.0.4638:sonar -Dsonar.projectKey=product-catalog'
+                    sh 'mvn --batch-mode --no-transfer-progress org.sonarsource.scanner.maven:sonar-maven-plugin:5.8.0.7211:sonar -Dsonar.projectKey=product-catalog'
                 }
             }
         }
