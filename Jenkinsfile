@@ -74,5 +74,12 @@ pipeline {
         failure {
             echo 'Build and test pipeline failed; review the stage output above'
         }
+        always {
+            junit testResults: 'target/surefire-reports/TEST-*.xml',
+                allowEmptyResults: true,
+                skipPublishingChecks: true
+            archiveArtifacts artifacts: 'target/surefire-reports/TEST-*.xml',
+                allowEmptyArchive: true
+        }
     }
 }

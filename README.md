@@ -132,11 +132,19 @@ both stacks on that port at the same time. To run the application alongside
 Jenkins, set `$env:APP_PORT = "8081"` before starting the application stack.
 
 The `HelloDocker` Pipeline job is configured for this repository's `main`
-branch and root `Jenkinsfile`. The GitHub repository's push webhook targets
-`https://matcher-actress-undivided.ngrok-free.dev/github-webhook/`; it works
-while the local ngrok process and Jenkins are running. The tunnel exposes
-Jenkins' sign-in page publicly, so keep Jenkins authentication enabled. Extra
-ngrok authentication is optional and must allow GitHub's webhook requests.
+branch and root `Jenkinsfile`. It publishes Maven Surefire JUnit XML results
+in Jenkins and archives the raw XML files, including when tests fail. A
+separate `HelloDocker-PRs` Multibranch Pipeline discovers pull requests from
+the origin repository and uses the same root `Jenkinsfile`; it does not scan
+regular branches, so `HelloDocker` remains responsible for `main` builds.
+Fork PRs are intentionally excluded because the build agent has access to the
+local Docker daemon.
+The GitHub repository webhook targets
+`https://matcher-actress-undivided.ngrok-free.dev/github-webhook/` and needs
+both `push` and `pull_request` events. It works while the local ngrok process
+and Jenkins are running. The tunnel exposes Jenkins' sign-in page publicly,
+so keep Jenkins authentication enabled. Extra ngrok authentication is
+optional and must allow GitHub's webhook requests.
 
 Jenkins' global SonarQube installation is named `Local SonarQube` and uses
 `http://sonarqube:9000` on the shared Docker network. Its authentication
