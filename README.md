@@ -112,12 +112,54 @@ Run `mvn test` when the Compose PostgreSQL service is running at `localhost:5432
 
 The root `Jenkinsfile` runs Maven verification, reports compiler warnings, and
 performs SonarQube analysis and quality-gate checks on the
-`maven-docker-agent`. Its `githubPush()` trigger lets a Jenkins Pipeline job
-configured from this repository build when GitHub sends a push event.
+`maven-docker-agent`. It includes a GitHub push trigger. The local Jenkins
+controller and SonarQube service are defined in `compose.jenkins.yaml`.
 
-Configure the job's SCM repository as this GitHub repository, branch as
-`*/main`, and script path as `Jenkinsfile`. In the repository's GitHub
-**Settings > Webhooks**, add
-`https://<your-ngrok-domain>/github-webhook/`, choose **application/json**, and
-select the **push** event. Keep Jenkins restricted to trusted users; the
-webhook endpoint itself is publicly reachable through the tunnel.
+Start or restart the local CI services from the repository root:
+
+```powershell
+docker compose -f compose.jenkins.yaml up -d --build
+```
+
+Open Jenkins at <http://localhost:8080> and SonarQube at
+<http://localhost:9000>. Both ports are bound to localhost. Jenkins data and
+the existing SonarQube data, extensions, and logs use persistent Docker
+volumes; the Compose project name and volume names preserve the running setup.
+The controller mounts the Docker socket, granting Jenkins control over the
+local Docker daemon, so use it only on a trusted development machine.
+The application Compose file also defaults to host port `8080`; do not run
+both stacks on that port at the same time. To run the application alongside
+Jenkins, set `$env:APP_PORT = "8081"` before starting the application stack.
+
+The `HelloDocker` Pipeline job is configured for this repository's `main`
+branch and root `Jenkinsfile`. The GitHub repository's push webhook targets
+`https://matcher-actress-undivided.ngrok-free.dev/github-webhook/`; it works
+while the local ngrok process and Jenkins are running. The tunnel exposes
+Jenkins' sign-in page publicly, so keep Jenkins authentication enabled. Extra
+ngrok authentication is optional and must allow GitHub's webhook requests.
+
+Jenkins' global SonarQube installation is named `Local SonarQube` and uses
+`http://sonarqube:9000` on the shared Docker network. Its authentication
+credential is stored in Jenkins, not in this repository. The SonarQube
+webhook points to `http://jenkins:8080/sonarqube-webhook/` for quality-gate
+results.
+
+Build the Java 21/Maven agent image from the repository root:
+
+```powershell
+docker build -f Dockerfile.maven-agent -t devops-maven-agent:3.9.9-java21 .
+```
+
+The Docker Cloud agent template uses label `maven-docker-agent`, image
+`devops-maven-agent:3.9.9-java21`, remote filesystem root
+`/home/jenkins/agent`, instance capacity `1`, pull strategy **Never pull**, and
+network `devops-ci`, with **Attach Docker container** as its connection method.
+
+The `HelloDocker` pipeline uses SonarQube project key `product-catalog`; the
+existing `DevOpsPractice` job remains separate and unchanged.
+
+To stop Jenkins and SonarQube without removing their persistent data:
+
+```powershell
+docker compose -f compose.jenkins.yaml down
+```

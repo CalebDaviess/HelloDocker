@@ -1,0 +1,14 @@
+FROM maven:3.9.9-eclipse-temurin-21
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 1001 jenkins \
+    && useradd --uid 1001 --gid jenkins --create-home --shell /bin/bash jenkins \
+    && mkdir -p /home/jenkins/agent \
+    && chown -R jenkins:jenkins /home/jenkins
+
+USER jenkins
+WORKDIR /home/jenkins/agent
+CMD ["sleep", "infinity"]

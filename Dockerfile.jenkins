@@ -1,0 +1,15 @@
+FROM jenkins/jenkins:lts@sha256:74401de6a6f92e1afe1b02d1c8e3d0c33f263bfb5275dd8813f9150355f2367b
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends docker-cli \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN jenkins-plugin-cli --plugins \
+    docker-plugin:1324.v2fb_b_df97fe1d \
+    docker-workflow:653.v2f2c08eff0ec \
+    pipeline-stage-view:2.41 \
+    sonar:2.19.0 \
+    warnings-ng:13.10345.v6642ea_283a_ef
+
+USER jenkins

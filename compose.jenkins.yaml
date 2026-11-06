@@ -1,0 +1,56 @@
+name: devops
+
+services:
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    image: devops-jenkins-docker:2.580.2
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    group_add:
+      - "0"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - ci
+
+  sonarqube:
+    image: sonarqube:community@sha256:f95aaa9016dd4e92c7d70691167a6d96dbb5d8acffd61eba1cb4335d364a7840
+    container_name: sonarqube
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9000:9000"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+      nproc:
+        soft: 8192
+        hard: 8192
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    networks:
+      - ci
+
+volumes:
+  jenkins_home:
+    external: true
+  sonarqube_data:
+    external: true
+    name: devops_sonarqube_data
+  sonarqube_extensions:
+    external: true
+    name: devops_sonarqube_extensions
+  sonarqube_logs:
+    external: true
+    name: devops_sonarqube_logs
+
+networks:
+  ci:
+    name: devops-ci
