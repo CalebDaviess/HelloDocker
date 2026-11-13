@@ -161,15 +161,18 @@ Surefire supplies test execution results, while JaCoCo supplies line and
 branch coverage. Existing test dependencies include `quarkus-junit5`,
 `quarkus-jacoco`, and `rest-assured` (test scope). A separate
 `HelloDocker-PRs` Multibranch Pipeline
-currently discovers pull requests from the origin repository and uses the same
-root `Jenkinsfile`. To have it build regular branches too, configure its GitHub
-Branch Source to retain pull-request discovery and add branch discovery with
-the strategy **Exclude branches that are also filed as pull requests**. Add a
-**Filter by name (with wildcards)** behavior with `*` included and `main`
-excluded; this avoids duplicate builds because `HelloDocker` remains
-responsible for `main`. Save the job and run **Scan Multibranch Pipeline Now**.
-Fork PRs are intentionally excluded because the build agent has access to the
-local Docker daemon.
+discovers pull requests and regular branches from the origin repository and
+uses the same root `Jenkinsfile`. Branch discovery is set to **Exclude branches
+that are also filed as pull requests**, and the name filter includes `*` but
+excludes `main`. As a result, pushes to any non-`main` branch get their own
+Multibranch job, while `HelloDocker` remains responsible for `main` builds
+without duplication. Pull request discovery remains enabled. The GitHub
+webhook's `push` and `pull_request` events trigger Jenkins indexing; a manual
+scan can also be started with **Scan Multibranch Pipeline Now**. New branch
+jobs appear once a branch containing the root `Jenkinsfile` is pushed. The
+repository currently only has `main`, so the initial indexing correctly
+created no additional branch jobs. Fork PRs are intentionally excluded because
+the build agent has access to the local Docker daemon.
 The GitHub repository webhook targets
 `https://matcher-actress-undivided.ngrok-free.dev/github-webhook/` and needs
 both `push` and `pull_request` events. The local public gateway routes the
@@ -180,11 +183,21 @@ The catalog UI and its CRUD API are intentionally public through ngrok. Anyone
 with the link can add, edit, or delete products. Use demo data only until
 authentication is added.
 
-After starting the complete stack, point ngrok at the local public gateway:
+ngrok is a separate process on the host; Docker and `start-dev-stack.ps1` do
+not start it automatically. After the Docker stack is running, open a separate
+PowerShell window, run the command below, and leave that window open while you
+want the public link available. Stopping the ngrok process (for example, with
+Ctrl+C in that window) closes the public tunnel but does not stop the Docker
+containers. Start the tunnel again manually after a restart:
 
 ```powershell
 ngrok http --url=https://matcher-actress-undivided.ngrok-free.dev 8082
 ```
+
+The public URL opens the catalog UI; the local gateway at
+<http://localhost:8082> routes it to the app and forwards only the GitHub
+webhook path to Jenkins. If a browser shows ngrok's free-tier interstitial,
+continue through its **Visit Site** prompt to reach the catalog.
 
 The existing GitHub webhook URL remains unchanged and continues to reach
 Jenkins through the gateway. A GitHub ping delivery can verify this route
@@ -245,16 +258,18 @@ After tests and the SonarQube quality gate pass, the `HelloDocker` pipeline
 builds the root `Dockerfile` locally as `product-catalog:build-<BUILD_NUMBER>`
 and `product-catalog:sha-<12-character-commit>`. These tags identify each
 build and its source commit. Main-branch builds then push both tags to Docker
-Hub; pull-request builds do not publish images. To enable publishing, configure
-the Jenkins global environment variable `DOCKERHUB_REPOSITORY` with the
-namespace and repository (for example, `myaccount/product-catalog`). Add a
-Jenkins **Username with password** credential with ID
-`dockerhub-credentials`, using your Docker Hub username and a Docker Hub access
-token as the password. The pipeline logs in with `--password-stdin` and does
-not store credentials in the repository. The Jenkins controller image includes
+Hub; pull-request builds do not publish images. Publishing is configured with
+the Jenkins global environment variable
+`DOCKERHUB_REPOSITORY=calebdavies/hellodocker` and the Jenkins **Username with
+password** credential `dockerhub-credentials`. The credential uses the
+Docker Hub username and a dedicated Docker Hub access token as its password.
+The pipeline logs in with `--password-stdin` and does not store credentials in
+the repository. Jenkins build `#12` passed Maven tests and the SonarQube
+quality gate and published `build-12` and `sha-c4efcc28a47e` to the configured
+Docker Hub repository. The Jenkins controller image includes
 credentials-binding `725.ve52b_2328a_fde`, which fixes the currently published
-path-traversal advisories. The existing
-`DevOpsPractice` job remains separate and unchanged.
+path-traversal advisories. The existing `DevOpsPractice` job remains separate
+and unchanged.
 
 To stop Jenkins and SonarQube without removing their persistent data:
 
