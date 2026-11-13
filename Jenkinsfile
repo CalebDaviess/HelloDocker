@@ -65,6 +65,51 @@ pipeline {
                 }
             }
         }
+
+        stage('Publish Docker Image') {
+            when {
+                expression {
+                    !env.CHANGE_ID && (env.BRANCH_NAME == null || env.BRANCH_NAME == 'main')
+                }
+            }
+            steps {
+                script {
+                    def repository = env.DOCKERHUB_REPOSITORY?.trim()
+                    if (!repository || !(repository ==~ /[a-z0-9]+(?:[._-][a-z0-9]+)*\/[a-z0-9]+(?:[._-][a-z0-9]+)*/)) {
+                        error('Set DOCKERHUB_REPOSITORY to a Docker Hub namespace/repository, for example myaccount/product-catalog')
+                    }
+
+                    def commitTag = sh(
+                        script: 'git rev-parse --short=12 HEAD',
+                        returnStdout: true
+                    ).trim()
+                    def buildTag = "build-${env.BUILD_NUMBER}"
+
+                    withEnv([
+                        "DOCKERHUB_IMAGE=${repository}",
+                        "PRODUCT_IMAGE_BUILD_TAG=${buildTag}",
+                        "PRODUCT_IMAGE_COMMIT_TAG=sha-${commitTag}"
+                    ]) {
+                        withCredentials([usernamePassword(
+                            credentialsId: 'dockerhub-credentials',
+                            usernameVariable: 'DOCKERHUB_USERNAME',
+                            passwordVariable: 'DOCKERHUB_TOKEN'
+                        )]) {
+                            sh '''
+                                set +x
+                                trap 'docker logout >/dev/null 2>&1 || true' EXIT
+                                printf '%s' "$DOCKERHUB_TOKEN" |
+                                    docker login --username "$DOCKERHUB_USERNAME" --password-stdin
+                                docker tag "product-catalog:$PRODUCT_IMAGE_BUILD_TAG" "$DOCKERHUB_IMAGE:$PRODUCT_IMAGE_BUILD_TAG"
+                                docker tag "product-catalog:$PRODUCT_IMAGE_COMMIT_TAG" "$DOCKERHUB_IMAGE:$PRODUCT_IMAGE_COMMIT_TAG"
+                                docker push "$DOCKERHUB_IMAGE:$PRODUCT_IMAGE_BUILD_TAG"
+                                docker push "$DOCKERHUB_IMAGE:$PRODUCT_IMAGE_COMMIT_TAG"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
     }
 
     post {

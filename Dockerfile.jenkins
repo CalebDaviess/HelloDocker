@@ -8,6 +8,9 @@ RUN apt-get update \
 RUN jenkins-plugin-cli --plugins \
     docker-plugin:1324.v2fb_b_df97fe1d \
     docker-workflow:653.v2f2c08eff0ec \
+    credentials-binding:725.ve52b_2328a_fde \
+    github:1.47.0 \
+    github-branch-source:1986.v801e40614d00 \
     pipeline-stage-view:2.41 \
     sonar:2.19.0 \
     warnings-ng:13.10345.v6642ea_283a_ef

@@ -106,7 +106,15 @@ To build just the API image, run `docker build -t product-catalog .` from the pr
 
 ## Tests
 
-Run `mvn test` when the Compose PostgreSQL service is running at `localhost:5432` or with Docker Desktop configured as the active context. The test profile disables Quarkus Dev Services and connects directly to the local Compose database instead of attempting its own Docker-managed PostgreSQL instance.
+Tests use the Quarkus test profile's in-memory H2 database and do not require
+the Compose PostgreSQL service. When the API is already running on port `8081`,
+use a different test HTTP port:
+
+```powershell
+mvn --batch-mode --no-transfer-progress clean verify '-Dquarkus.http.test-port=18081'
+```
+
+Without the API running, the usual `mvn test` command is sufficient.
 
 ## Jenkins
 
@@ -127,9 +135,13 @@ the existing SonarQube data, extensions, and logs use persistent Docker
 volumes; the Compose project name and volume names preserve the running setup.
 The controller mounts the Docker socket, granting Jenkins control over the
 local Docker daemon, so use it only on a trusted development machine.
+The Jenkins/SonarQube Compose project name remains `devops` while the Jenkins
+build and publish setup is being verified. The requested `devopsassignment`
+rename is deferred to avoid disrupting the currently linked containers.
+Existing explicit container, network, and external volume names are unchanged.
 The application Compose file also defaults to host port `8080`; do not run
-both stacks on that port at the same time. To run the application alongside
-Jenkins, set `$env:APP_PORT = "8081"` before starting the application stack.
+both stacks on that port at the same time. Use the combined startup script
+below to run both stacks together; it assigns the application host port `8081`.
 
 The `HelloDocker` Pipeline job is configured for this repository's `main`
 branch and root `Jenkinsfile`. It publishes Maven Surefire JUnit XML results
@@ -141,9 +153,13 @@ Surefire supplies test execution results, while JaCoCo supplies line and
 branch coverage. Existing test dependencies include `quarkus-junit5`,
 `quarkus-jacoco`, and `rest-assured` (test scope). A separate
 `HelloDocker-PRs` Multibranch Pipeline
-discovers pull requests from the origin repository and uses the same root
-`Jenkinsfile`; it does not scan regular branches, so `HelloDocker` remains
-responsible for `main` builds.
+currently discovers pull requests from the origin repository and uses the same
+root `Jenkinsfile`. To have it build regular branches too, configure its GitHub
+Branch Source to retain pull-request discovery and add branch discovery with
+the strategy **Exclude branches that are also filed as pull requests**. Add a
+**Filter by name (with wildcards)** behavior with `*` included and `main`
+excluded; this avoids duplicate builds because `HelloDocker` remains
+responsible for `main`. Save the job and run **Scan Multibranch Pipeline Now**.
 Fork PRs are intentionally excluded because the build agent has access to the
 local Docker daemon.
 The GitHub repository webhook targets
@@ -153,11 +169,41 @@ and Jenkins are running. The tunnel exposes Jenkins' sign-in page publicly,
 so keep Jenkins authentication enabled. Extra ngrok authentication is
 optional and must allow GitHub's webhook requests.
 
+After the local services are healthy, start the configured tunnel from another
+PowerShell window:
+
+```powershell
+ngrok http --domain=matcher-actress-undivided.ngrok-free.dev 8080
+```
+
+The existing GitHub hook remains unchanged; a GitHub ping delivery can verify
+the route without starting a build.
+
 Jenkins' global SonarQube installation is named `Local SonarQube` and uses
 `http://sonarqube:9000` on the shared Docker network. Its authentication
 credential is stored in Jenkins, not in this repository. The SonarQube
 webhook points to `http://jenkins:8080/sonarqube-webhook/` for quality-gate
 results.
+
+### Start the complete local stack
+
+From the repository root, start the Product Catalog API, PostgreSQL, Jenkins,
+and SonarQube together:
+
+```powershell
+.\start-dev-stack.ps1
+```
+
+The script builds and starts the application stack on <http://localhost:8081>,
+then builds and starts Jenkins on
+<http://localhost:8080> and SonarQube on <http://localhost:9000>. Validate
+these local services before starting ngrok. To stop the stacks without
+deleting their data:
+
+```powershell
+docker compose -f compose.yaml down
+docker compose -p devops -f compose.jenkins.yaml down
+```
 
 Build the Java 21/Maven agent image from the repository root:
 
@@ -178,8 +224,16 @@ daemon; only run trusted pipeline code.
 After tests and the SonarQube quality gate pass, the `HelloDocker` pipeline
 builds the root `Dockerfile` locally as `product-catalog:build-<BUILD_NUMBER>`
 and `product-catalog:sha-<12-character-commit>`. These tags identify each
-build and its source commit. The image stays in the local Docker image store;
-it is not pushed to a registry or deployed publicly. The existing
+build and its source commit. Main-branch builds then push both tags to Docker
+Hub; pull-request builds do not publish images. To enable publishing, configure
+the Jenkins global environment variable `DOCKERHUB_REPOSITORY` with the
+namespace and repository (for example, `myaccount/product-catalog`). Add a
+Jenkins **Username with password** credential with ID
+`dockerhub-credentials`, using your Docker Hub username and a Docker Hub access
+token as the password. The pipeline logs in with `--password-stdin` and does
+not store credentials in the repository. The Jenkins controller image includes
+credentials-binding `725.ve52b_2328a_fde`, which fixes the currently published
+path-traversal advisories. The existing
 `DevOpsPractice` job remains separate and unchanged.
 
 To stop Jenkins and SonarQube without removing their persistent data:
