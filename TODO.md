@@ -5,8 +5,9 @@
 - [x] Add main-branch Docker Hub publishing for build-number and commit-SHA tags.
 - [x] Rebuild Jenkins with GitHub and security-fixed credentials-binding plugins.
 - [ ] Set `DOCKERHUB_REPOSITORY`, add Jenkins credential `dockerhub-credentials`, and run a main build to verify Docker Hub publishing.
-- [x] Start the existing ngrok tunnel after local checks; confirm the public Jenkins route and GitHub webhook ping delivery.
-- [ ] After the Product Catalog UI is built, decide whether the public ngrok link should open the catalog UI by default while keeping Jenkins available at a separate path or host; make the UI target easy to swap.
+- [x] Route ngrok to the public catalog UI and verify the existing GitHub webhook still delivers through the gateway.
+- [x] Build a separate catalog UI served by the existing API container and route ngrok to the UI while preserving the GitHub webhook path.
+- [ ] Add authentication before using the public catalog with non-demo data.
 - [ ] After a successful Jenkins build/publish, rename the Docker Compose project from `devops` to `devopsassignment`.
-- [ ] Next week: plan a more complete Product Catalog project by expanding the existing API functionality and evaluating a user interface for browsing and managing products.
+- [ ] Next week: plan broader Product Catalog capabilities beyond the current CRUD API and catalog UI.
 - [ ] Next week: plan an Azure Database for PostgreSQL deployment for the Product Catalog, including secure connection configuration, database migrations, and startup/deployment behavior.

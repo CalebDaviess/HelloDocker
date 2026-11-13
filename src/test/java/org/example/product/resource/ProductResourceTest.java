@@ -15,6 +15,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ProductResourceTest {
 
     @Test
+    void servesCatalogUiFromApplication() {
+        given()
+                .when()
+                .get("/")
+                .then()
+                .statusCode(200)
+                .contentType(org.hamcrest.Matchers.containsString("text/html"))
+                .body(org.hamcrest.Matchers.containsString("Your products"));
+
+        given()
+                .when()
+                .get("/catalog/styles.css")
+                .then()
+                .statusCode(200)
+                .contentType(org.hamcrest.Matchers.containsString("text/css"));
+
+        given()
+                .when()
+                .get("/catalog/app.js")
+                .then()
+                .statusCode(200)
+                .contentType(org.hamcrest.Matchers.containsString("javascript"))
+                .body(org.hamcrest.Matchers.containsString("/api/products"));
+    }
+
+    @Test
     void supportsProductCrudLifecycle() {
         String request = """
                 {

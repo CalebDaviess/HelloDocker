@@ -1,6 +1,6 @@
-# Product Catalog API
+# Product Catalog
 
-A Quarkus REST API for managing products, backed by PostgreSQL with Hibernate Reactive and Panache.
+A Quarkus product catalog with a responsive browser UI and REST API, backed by PostgreSQL with Hibernate ORM and Panache.
 
 ## Requirements
 
@@ -19,7 +19,13 @@ $env:DB_PASSWORD = "product_catalog"
 mvn quarkus:dev
 ```
 
-Swagger UI is available at <http://localhost:8080/q/swagger-ui/> and the OpenAPI document at <http://localhost:8080/q/openapi>.
+The product catalog UI is served at `/`. Swagger UI is available at
+`/q/swagger-ui/` and the OpenAPI document at `/q/openapi`.
+
+The UI lists products from the REST API and supports searching, sorting,
+creating, editing, and deleting catalog entries. It is compiled as static
+Quarkus resources inside the existing `web-1` image, so the UI and API share
+the same origin and the existing Jenkins pipeline builds them together.
 
 ## Product endpoints
 
@@ -48,7 +54,7 @@ The current schema strategy updates the database schema automatically for this s
 
 ## Container image
 
-The Dockerfile builds the Quarkus fast-jar package with Java 21 and copies only the runnable application into a Java 21 runtime image. The API listens on port `8080`.
+The Dockerfile builds the Quarkus fast-jar package, including the static catalog UI, with Java 21 and copies only the runnable application into a Java 21 runtime image. The UI and API share port `8080` and the same origin.
 
 For local development with PostgreSQL, copy `.env.example` to `.env` and start both services. The Compose file passes `DB_JDBC_URL` to the app so the runtime connects with a standard JDBC Postgres URL.
 
@@ -57,7 +63,7 @@ Copy-Item .env.example .env
 docker compose up --watch
 ```
 
-The API is at <http://localhost:8080>, with Swagger UI at <http://localhost:8080/q/swagger-ui/>. Opening the root address redirects to Swagger UI. Compose waits for PostgreSQL's readiness check before starting the API. PostgreSQL stores its data in the named `product-catalog-data` volume, so it survives container recreation. The example database credentials are for local development only.
+The catalog is at <http://localhost:8080>, with Swagger UI at <http://localhost:8080/q/swagger-ui/>. Compose waits for PostgreSQL's readiness check before starting the app. PostgreSQL stores its data in the named `product-catalog-data` volume, so it survives container recreation. The example database credentials are for local development only.
 
 Compose Watch rebuilds the API image when Java source/resources under `src/main` or `pom.xml` change. Rebuilding is necessary here because the runtime image contains compiled Java classes, not a live source interpreter. Use `docker compose up --build` if you want to start without Watch.
 
@@ -144,7 +150,9 @@ both stacks on that port at the same time. Use the combined startup script
 below to run both stacks together; it assigns the application host port `8081`.
 
 The `HelloDocker` Pipeline job is configured for this repository's `main`
-branch and root `Jenkinsfile`. It publishes Maven Surefire JUnit XML results
+branch and root `Jenkinsfile`. Its Maven build packages the UI resources into
+the application image, so API and UI changes use the same push/build flow. It
+publishes Maven Surefire JUnit XML results
 in Jenkins and archives the raw XML files, including when tests fail. The
 `quarkus-jacoco` test extension generates coverage for the existing
 `@QuarkusTest` tests at `target/jacoco-report/jacoco.xml`; SonarQube imports
@@ -164,20 +172,23 @@ Fork PRs are intentionally excluded because the build agent has access to the
 local Docker daemon.
 The GitHub repository webhook targets
 `https://matcher-actress-undivided.ngrok-free.dev/github-webhook/` and needs
-both `push` and `pull_request` events. It works while the local ngrok process
-and Jenkins are running. The tunnel exposes Jenkins' sign-in page publicly,
-so keep Jenkins authentication enabled. Extra ngrok authentication is
-optional and must allow GitHub's webhook requests.
+both `push` and `pull_request` events. The local public gateway routes the
+homepage and API to the catalog app and forwards only `/github-webhook/` to
+Jenkins; the Jenkins UI remains local at <http://localhost:8080>.
 
-After the local services are healthy, start the configured tunnel from another
-PowerShell window:
+The catalog UI and its CRUD API are intentionally public through ngrok. Anyone
+with the link can add, edit, or delete products. Use demo data only until
+authentication is added.
+
+After starting the complete stack, point ngrok at the local public gateway:
 
 ```powershell
-ngrok http --domain=matcher-actress-undivided.ngrok-free.dev 8080
+ngrok http --url=https://matcher-actress-undivided.ngrok-free.dev 8082
 ```
 
-The existing GitHub hook remains unchanged; a GitHub ping delivery can verify
-the route without starting a build.
+The existing GitHub webhook URL remains unchanged and continues to reach
+Jenkins through the gateway. A GitHub ping delivery can verify this route
+without starting a build.
 
 Jenkins' global SonarQube installation is named `Local SonarQube` and uses
 `http://sonarqube:9000` on the shared Docker network. Its authentication
@@ -194,11 +205,20 @@ and SonarQube together:
 .\start-dev-stack.ps1
 ```
 
-The script builds and starts the application stack on <http://localhost:8081>,
-then builds and starts Jenkins on
-<http://localhost:8080> and SonarQube on <http://localhost:9000>. Validate
-these local services before starting ngrok. To stop the stacks without
-deleting their data:
+The script starts Jenkins first, then builds and starts the app stack with
+PostgreSQL and the public gateway. The catalog is at <http://localhost:8081>;
+the gateway for ngrok is at <http://localhost:8082>; Jenkins is at
+<http://localhost:8080> and SonarQube at <http://localhost:9000>. The gateway
+also requires the existing `devops-ci` Jenkins network, so start Jenkins
+before enabling the `public` Compose profile. If starting services manually
+from Docker Desktop, enable the profile by running this once from the repo
+root after Jenkins is up:
+
+```powershell
+docker compose -f compose.yaml --profile public up -d
+```
+
+To stop the stacks without deleting their data:
 
 ```powershell
 docker compose -f compose.yaml down

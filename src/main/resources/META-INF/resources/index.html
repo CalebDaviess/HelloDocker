@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4ef">
+    <meta name="description" content="A clear, friendly workspace for browsing and managing your product catalog.">
+    <title>Product Catalog — your inventory, in focus</title>
+    <link rel="stylesheet" href="/catalog/styles.css">
+    <script src="/catalog/app.js" defer></script>
+</head>
+<body>
+<div class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="/" aria-label="Product Catalog home">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 32 32" fill="none">
+                    <path d="M5 10.2 16 4l11 6.2v11.6L16 28 5 21.8V10.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                    <path d="m5.5 10.5 10.5 6 10.5-6M16 17v10.5M10.5 7.2l11 6.2v6.2" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                </svg>
+            </span>
+            <span class="brand-copy">
+                <strong>fieldnotes</strong>
+                <small>PRODUCT CATALOG</small>
+            </span>
+        </a>
+        <div class="topbar-right">
+            <span class="live-indicator"><span></span> LIVE CATALOG</span>
+            <span class="avatar" aria-label="Catalog workspace">F</span>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero" aria-labelledby="page-title">
+            <div class="hero-copy">
+                <p class="eyebrow"><span class="eyebrow-line"></span> YOUR WORKSPACE <span class="eyebrow-dot">/</span> INVENTORY</p>
+                <h1 id="page-title">Everything in<br>its right <em>place.</em></h1>
+                <p class="hero-description">A thoughtful home for the things you make, stock, and share. Keep your catalog clear and your next move obvious.</p>
+                <button class="button button-dark" id="add-product" type="button">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                    Add a product
+                </button>
+            </div>
+            <div class="hero-art" aria-hidden="true">
+                <div class="orbit orbit-one"></div>
+                <div class="orbit orbit-two"></div>
+                <div class="sun-disc"></div>
+                <div class="art-caption"><span>01</span> MAKE ROOM FOR WHAT'S NEXT</div>
+                <div class="art-sticker">GOOD<br>THINGS<br>LIVE HERE <span>✳</span></div>
+                <div class="art-block block-back"></div>
+                <div class="art-block block-front"><span>F.</span></div>
+            </div>
+        </section>
+
+        <section class="metrics" aria-label="Catalog overview">
+            <div class="metric">
+                <span class="metric-label">IN THE CATALOG</span>
+                <strong id="metric-products">—</strong>
+                <span class="metric-note">products to explore</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">TOTAL STOCK</span>
+                <strong id="metric-stock">—</strong>
+                <span class="metric-note">items ready to go</span>
+            </div>
+            <div class="metric metric-value">
+                <span class="metric-label">STOCK VALUE</span>
+                <strong id="metric-value">—</strong>
+                <span class="metric-note">based on listed prices</span>
+            </div>
+            <div class="metrics-aside"><span class="sparkle">✳</span><span>Small details.<br>Better decisions.</span></div>
+        </section>
+
+        <section class="catalog-section" aria-labelledby="catalog-heading">
+            <div class="section-heading">
+                <div>
+                    <p class="eyebrow">THE COLLECTION</p>
+                    <h2 id="catalog-heading">Your products<span class="heading-period">.</span></h2>
+                </div>
+                <label class="search-box">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.7" cy="8.7" r="5.7" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="m13 13 4 4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    <input id="product-search" type="search" placeholder="Find something..." autocomplete="off" aria-label="Search products">
+                    <kbd>/</kbd>
+                </label>
+            </div>
+
+            <div class="catalog-toolbar">
+                <p id="results-label" aria-live="polite">Loading your collection</p>
+                <div class="toolbar-right">
+                    <label class="sort-label" for="sort-products">SORT BY</label>
+                    <select id="sort-products" aria-label="Sort products">
+                        <option value="recent">Recently added</option>
+                        <option value="name">Name, A–Z</option>
+                        <option value="price-low">Price, low to high</option>
+                        <option value="price-high">Price, high to low</option>
+                        <option value="stock">Stock, low to high</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="product-grid" class="product-grid" aria-live="polite"></div>
+            <div id="catalog-message" class="catalog-message" role="status" hidden></div>
+            <div id="catalog-error" class="catalog-error" role="alert" hidden>
+                <span>We couldn't reach your catalog just now.</span>
+                <button class="text-button" id="retry-load" type="button">Try again</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <a class="footer-brand" href="/">fieldnotes<span>®</span></a>
+        <span>A little more order, a lot more possibility.</span>
+        <a class="api-link" href="/q/swagger-ui/">API docs <span aria-hidden="true">↗</span></a>
+    </footer>
+</div>
+
+<dialog id="product-dialog" class="product-dialog" aria-labelledby="dialog-title">
+    <form id="product-form" novalidate>
+        <div class="dialog-heading">
+            <div>
+                <p class="eyebrow">YOUR COLLECTION</p>
+                <h2 id="dialog-title">Add a product<span class="heading-period">.</span></h2>
+            </div>
+            <button class="icon-button dialog-close" id="close-dialog" type="button" aria-label="Close dialog">×</button>
+        </div>
+        <label class="field-label" for="product-name">Product name <span>*</span></label>
+        <input class="form-control" id="product-name" name="name" required maxlength="120" placeholder="e.g. Studio ceramic vase">
+        <label class="field-label" for="product-description">A little about it</label>
+        <textarea class="form-control" id="product-description" name="description" rows="3" maxlength="2000" placeholder="Materials, details, or what makes it special"></textarea>
+        <div class="form-row">
+            <div>
+                <label class="field-label" for="product-price">Price <span>*</span></label>
+                <div class="input-with-prefix"><span>$</span><input class="form-control" id="product-price" name="price" type="number" min="0.01" max="9999999999.99" step="0.01" required placeholder="0.00"></div>
+            </div>
+            <div>
+                <label class="field-label" for="product-stock">Stock on hand <span>*</span></label>
+                <input class="form-control" id="product-stock" name="stockQuantity" type="number" min="0" step="1" required placeholder="0">
+            </div>
+        </div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <div class="dialog-actions">
+            <button class="button button-light" id="cancel-dialog" type="button">Cancel</button>
+            <button class="button button-dark" id="save-product" type="submit">Save product</button>
+        </div>
+    </form>
+</dialog>
+</body>
+</html>
