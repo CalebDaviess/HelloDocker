@@ -1,5 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
+if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.secrets\catalog.htpasswd') -PathType Leaf)) {
+    throw 'Catalog authentication is not configured. Run .\set-catalog-auth.ps1 first.'
+}
+
 Push-Location $PSScriptRoot
 try {
     $env:APP_PORT = '8081'

@@ -179,9 +179,26 @@ both `push` and `pull_request` events. The local public gateway routes the
 homepage and API to the catalog app and forwards only `/github-webhook/` to
 Jenkins; the Jenkins UI remains local at <http://localhost:8080>.
 
-The catalog UI and its CRUD API are intentionally public through ngrok. Anyone
-with the link can add, edit, or delete products. Use demo data only until
-authentication is added.
+The catalog UI and CRUD API are protected by one shared username and password
+at the public Nginx gateway. The GitHub `/github-webhook/` route remains
+available to GitHub without catalog credentials. The local development app port
+continues to work directly; authentication applies to the public gateway.
+
+Before starting the public gateway for the first time, create the password
+file. Docker prompts for the password without putting it in the command line;
+the generated bcrypt hash is stored under the Git-ignored `.secrets` folder:
+
+```powershell
+.\set-catalog-auth.ps1
+```
+
+The helper uses the `httpd:2.4-alpine` image to generate the password hash.
+After changing credentials, recreate the gateway so it loads the updated
+password file:
+
+```powershell
+docker compose -f compose.yaml --profile public up -d --force-recreate public-gateway
+```
 
 ngrok is a separate process on the host; Docker and `start-dev-stack.ps1` do
 not start it automatically. After the Docker stack is running, open a separate
@@ -218,6 +235,22 @@ and SonarQube together:
 .\start-dev-stack.ps1
 ```
 
+#### Quick start: Jenkins on localhost, catalog via ngrok
+
+1. Start Docker Desktop.
+2. First time only, create the catalog gateway password file:
+   `.\set-catalog-auth.ps1`
+3. Start everything from the repository root: `.\start-dev-stack.ps1`
+4. In a separate PowerShell window, start the tunnel and leave it open:
+   `ngrok http --url=https://matcher-actress-undivided.ngrok-free.dev 8082`
+5. Open Jenkins locally at <http://localhost:8080>. Open the catalog
+   publicly at <https://matcher-actress-undivided.ngrok-free.dev> and sign in
+   with the catalog username and password. Locally, you can still reach the
+   catalog without a password at <http://localhost:8081>.
+
+Press Ctrl+C in the ngrok window to close the public link; the containers
+keep running.
+
 The script starts Jenkins first, then builds and starts the app stack with
 PostgreSQL and the public gateway. The catalog is at <http://localhost:8081>;
 the gateway for ngrok is at <http://localhost:8082>; Jenkins is at
@@ -230,6 +263,51 @@ root after Jenkins is up:
 ```powershell
 docker compose -f compose.yaml --profile public up -d
 ```
+
+### Deploy or roll back a published image
+
+The deployment Compose file is separate from the source-building development
+stack. It uses its own Compose project and PostgreSQL volume, so it does not
+replace or delete the development database. The deployment gateway listens on
+localhost port `8083` and uses the same catalog password file. Jenkins must be
+running because the gateway shares its `devops-ci` network to preserve the
+GitHub webhook route.
+
+Create a deployment environment file and edit it to choose a published tag and
+a unique database password:
+
+```powershell
+Copy-Item .env.deploy.example .env.deploy
+notepad .env.deploy
+```
+
+For example, set `PRODUCT_CATALOG_IMAGE` to
+`calebdavies/hellodocker:build-14` or a `sha-<commit>` tag that exists in Docker
+Hub. Keep `.env.deploy` private; it is excluded from Git. Then pull and start
+the selected image:
+
+```powershell
+docker compose --env-file .env.deploy -f compose.deploy.yaml pull web
+docker compose --env-file .env.deploy -f compose.deploy.yaml up -d
+```
+
+To roll forward or back, change `PRODUCT_CATALOG_IMAGE` in `.env.deploy` to
+another published build or commit tag, then run those same `pull` and `up`
+commands. The build and SHA tags for a particular main-branch build point to
+the same image. This is a manual image selection; reverting Git does not
+automatically change the deployed tag. To expose this deployment through the
+existing ngrok domain, stop the current ngrok process and run
+`ngrok http --url=https://matcher-actress-undivided.ngrok-free.dev 8083`.
+Change the final port back to `8082` to expose the development stack again.
+
+Stop the deployment without deleting its database:
+
+```powershell
+docker compose --env-file .env.deploy -f compose.deploy.yaml down
+```
+
+Do not add `-v` unless you intentionally want to permanently delete the
+deployment database.
 
 To stop the stacks without deleting their data:
 
